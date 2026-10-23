@@ -106,7 +106,7 @@ anything with a click handler), links, inputs, toggles, clickable cards or rows,
 nav items (tabs, sidebar links, breadcrumbs), and custom widgets (dropdowns,
 accordions, modals, popovers).
 
-Then test each element against the state table in `${CLAUDE_PLUGIN_ROOT}/skills/design/references/a11y.md` and the motion
+Then test each element against the interactive-states table in `${CLAUDE_PLUGIN_ROOT}/skills/design/references/a11y.md` and the motion
 timing bands in `${CLAUDE_PLUGIN_ROOT}/skills/design/references/design-tokens.md` — default, hover, active, focus,
 disabled, loading, plus transitions, `prefers-reduced-motion`, action feedback,
 and state visibility. Flag all of it, borderline cases too, and attach a

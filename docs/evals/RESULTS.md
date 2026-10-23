@@ -8,6 +8,11 @@ own setup loads in either arm.
 **Run:** 2026-10-23 · Claude Code 2.1.309 · model under test: Sonnet ·
 judge: Haiku · 3 runs per arm per case · total cost about $2.60.
 
+One full run covered all six cases. The upload case was then run again on
+its own, because the baseline arm of the full run hit an account usage limit
+and produced no answers; the table uses that re-run. So routing counts 15 runs
+from the full run plus 3 from the re-run.
+
 ## Does the right skill fire?
 
 | | Runs |
@@ -36,7 +41,7 @@ comparable.
   told — writing the regression test, persisting the plan, accessibility
   details in UI work, and treating "no value" differently from zero.
 - **Where it adds nothing measurable:** Sonnet already hardens a file upload
-  well on its own (7 of 8 baseline runs across all runs so far). The security
+  well on its own (7 of 8 baseline runs across every run we made). The security
   skill still fires there; its value is consistency, not this case's score.
 - **No cost on simple questions:** the quick question is answered the same
   way with the plugin loaded — no detour into process.
@@ -60,7 +65,11 @@ The evals found two real gaps, both fixed before this run:
 - LLM-judged graders can vary between runs; the file and tool-use graders
   don't.
 - The cases measure behaviors Launchpad is designed to produce; they are
-  evidence that it does what it says, not a general benchmark.
+  evidence that it does what it says, not a general benchmark. Three graders
+  check habits plain Claude wasn't asked for — writing the plan to a file, adding
+  a test when the prompt said "reply with the code", and using `:focus-visible`
+  for focus styles — so a baseline that answers well in another way still
+  scores lower on them.
 
 ## Reproduce
 

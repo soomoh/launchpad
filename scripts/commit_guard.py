@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -57,13 +59,29 @@ TERM_FILES = (Path.home() / ".claude" / "privacy-terms.local", Path(".privacy-te
 # Shorter terms would match ordinary words.
 MIN_TERM_CHARS = 4
 
-# The subcommand must end at whitespace or a shell separator, so `git commit-tree` and
-# `git add-on` style names don't count.
-GIT_COMMIT = re.compile(r"\bgit\b(?:\s+-[cC]\s+\S+)*\s+commit(?=$|[\s;&|)])")
-GIT_ADD = re.compile(r"\bgit\b(?:\s+-[cC]\s+\S+)*\s+add(?=$|[\s;&|)])")
+# Git's global options may sit between `git` and the subcommand (`git --no-pager
+# commit`, `git -C dir commit`). Options that take a separate value come first so their
+# value isn't mistaken for the subcommand. The subcommand must end at whitespace or a
+# shell separator, so `git commit-tree` and `git add-on` style names don't count.
+GLOBAL_OPTS = (
+    r"(?:\s+(?:-[cC]|--git-dir|--work-tree|--namespace|--config-env|--exec-path)\s+\S+"
+    r"|\s+-[-\w]+(?:=\S+)?)*"
+)
+GIT_COMMIT = re.compile(rf"\bgit\b{GLOBAL_OPTS}\s+commit(?=$|[\s;&|)])")
+GIT_ADD = re.compile(rf"\bgit\b{GLOBAL_OPTS}\s+add(?=$|[\s;&|)])")
 GIT_DIR_FLAG = re.compile(r"\bgit\s+-C\s+(\"[^\"]+\"|'[^']+'|\S+)")
 LEADING_CD = re.compile(r"^\s*cd\s+(\"[^\"]+\"|'[^']+'|\S+)\s*(&&|;)")
-COMMIT_ALL_FLAG = re.compile(r"\s(-a\b|-[a-zA-Z]*a[a-zA-Z]*\b|--all\b)")
+# `git commit` options whose value is the next argument. Anything else that isn't an
+# option is a pathspec, which commits working-tree contents the staged scan can't see.
+VALUE_OPTIONS = {
+    "-m", "-F", "-C", "-c", "-t", "--message", "--file", "--reuse-message",
+    "--reedit-message", "--template", "--author", "--date", "--cleanup", "--fixup",
+    "--squash", "--trailer",
+}  # fmt: skip
+SHORT_VALUE_FLAGS = "mFCct"
+PATHSPEC_OPTIONS = {"-i", "--include", "-o", "--only", "--pathspec-from-file"}
+GITLEAKS_TIMEOUT_SECONDS = 20
+GITLEAKS_FOUND = 10  # exit code we ask gitleaks to use for "leaks found"
 
 
 class Line(NamedTuple):
@@ -131,13 +149,58 @@ def git(root: Path, *args: str) -> str:
     ).stdout
 
 
+# External diff tools and textconv filters from the user's git config could hide added
+# lines from the scan; switch them off for every diff the guard reads.
+DIFF_ARGS = ("-U0", "--no-color", "--no-ext-diff", "--no-textconv")
+
+
+def staged_paths(root: Path, *scope: str) -> list[str]:
+    """Paths added or changed, NUL-separated so spaces and non-ASCII names stay exact.
+
+    Taken from git's file list, not diff headers: an empty or binary file, or a rename,
+    has no `+++` line to read a path from.
+    """
+    out = git(root, "diff", *scope, "--name-only", "-z", "--no-renames", "--diff-filter=ACMR")
+    return [p for p in out.split("\0") if p]
+
+
+def gitleaks_findings(root: Path) -> list[str]:
+    """One finding if gitleaks is installed and flags the staged changes; else none.
+
+    Optional and additive: our own scan always runs too. A gitleaks error (old version,
+    timeout) is ignored rather than blocking, since our scan already covered the commit.
+    """
+    executable = shutil.which("gitleaks")
+    if executable is None:
+        return []
+    command = [
+        executable, "git", "--pre-commit", "--staged", "--no-banner", "--redact",
+        "--exit-code", str(GITLEAKS_FOUND), str(root),
+    ]  # fmt: skip
+    try:
+        result = subprocess.run(
+            command, cwd=root, capture_output=True, timeout=GITLEAKS_TIMEOUT_SECONDS
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if result.returncode != GITLEAKS_FOUND:
+        return []
+    return [
+        "gitleaks: the staged changes contain a likely secret "
+        "(run `gitleaks git --pre-commit --staged -v` to see where)"
+    ]
+
+
 def scan_staged(root: Path, include_unstaged_tracked: bool = False) -> list[str]:
     """Findings for what the next commit would contain."""
-    diff = git(root, "diff", "--cached", "-U0", "--no-color")
+    diff = git(root, "diff", "--cached", *DIFF_ARGS)
+    paths = staged_paths(root, "--cached")
     if include_unstaged_tracked:  # `git commit -a` also takes tracked, unstaged edits
-        diff += "\n" + git(root, "diff", "-U0", "--no-color")
-    paths, added = parse_diff(diff)
-    return find_problems(paths, added, personal_terms(root))
+        diff += "\n" + git(root, "diff", *DIFF_ARGS)
+        paths += staged_paths(root)
+    _, added = parse_diff(diff)
+    problems = find_problems(paths, added, personal_terms(root))
+    return sorted(set(problems + gitleaks_findings(root)))
 
 
 def scan_history(root: Path) -> list[str]:
@@ -161,6 +224,47 @@ def repo_root_for(command: str, cwd: Path) -> Path:
     return cwd
 
 
+def commit_options(rest: str) -> tuple[bool, bool]:
+    """(commits all tracked changes, names paths) for the text after `git commit`.
+
+    Reads arguments up to the first shell separator, so a `-a` inside the message or a
+    later `git push --all` doesn't count.
+    """
+    try:
+        lexer = shlex.shlex(rest, posix=True, punctuation_chars=";&|")
+        lexer.whitespace_split = True
+        tokens = list(lexer)
+    except ValueError:  # unbalanced quotes: let git reject it
+        return False, False
+    commit_all = names_paths = False
+    args = iter(tokens)
+    for token in args:
+        if token and token[0] in ";&|":
+            break
+        if token == "--":
+            names_paths = any(True for _ in args)
+            break
+        if token in ("-a", "--all"):
+            commit_all = True
+        elif token in PATHSPEC_OPTIONS or token.startswith("--pathspec-from-file="):
+            names_paths = True
+        elif token in VALUE_OPTIONS:
+            next(args, None)
+        elif token.startswith("--"):
+            continue  # --long or --long=value
+        elif token.startswith("-") and len(token) > 1:
+            flags = token[1:]
+            value_at = next((i for i, f in enumerate(flags) if f in SHORT_VALUE_FLAGS), None)
+            head = flags if value_at is None else flags[:value_at]
+            commit_all = commit_all or "a" in head
+            names_paths = names_paths or "i" in head or "o" in head
+            if value_at == len(flags) - 1:
+                next(args, None)  # e.g. `-am "msg"`: the value is the next argument
+        else:
+            names_paths = True
+    return commit_all, names_paths
+
+
 def check_command(command: str, cwd: Path) -> str | None:
     """Hook decision for one Bash command: None to allow, or the reason to block."""
     commit = GIT_COMMIT.search(command)
@@ -177,7 +281,13 @@ def check_command(command: str, cwd: Path) -> str | None:
         root = Path(git(repo_root_for(command, cwd), "rev-parse", "--show-toplevel").strip())
     except (subprocess.CalledProcessError, OSError):
         return None  # not a repo: git commit will fail on its own
-    commit_all = bool(COMMIT_ALL_FLAG.search(command[commit.end() :]))
+    commit_all, names_paths = commit_options(command[commit.end() :])
+    if names_paths:
+        return (
+            "commit guard: commit with a plain `git commit` after staging the files with "
+            "`git add`. Naming files on `git commit` commits their unstaged contents, "
+            "which the guard can't scan."
+        )
     problems = scan_staged(root, include_unstaged_tracked=commit_all)
     if not problems:
         return None

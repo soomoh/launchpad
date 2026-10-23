@@ -28,6 +28,12 @@ def isolated_terms(monkeypatch, tmp_path):
     monkeypatch.setattr(commit_guard, "TERM_FILES", (Path(".privacy-terms"),))
 
 
+@pytest.fixture(autouse=True)
+def no_gitleaks(monkeypatch):
+    """Tests decide whether gitleaks exists; a developer's own install never leaks in."""
+    monkeypatch.setattr(commit_guard.shutil, "which", lambda name: None)
+
+
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
@@ -35,6 +41,7 @@ def repo(tmp_path: Path) -> Path:
     run(root, "init", "-q")
     run(root, "config", "user.email", "test@example.invalid")
     run(root, "config", "user.name", "Test")
+    run(root, "config", "commit.gpgsign", "false")
     write(root, "README.md", "hello\n")
     run(root, "add", "README.md")
     run(root, "commit", "-qm", "init")
@@ -205,3 +212,93 @@ def test_history_with_non_utf8_bytes_is_scanned_not_crashed(repo):
     run(repo, "commit", "-qm", "oops")
     problems = commit_guard.scan_history(repo)
     assert len(problems) == 1 and "secret" in problems[0]
+
+
+# --- audit regressions: ways past the guard that once worked -------------------------
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git --no-pager commit -m x",
+        "git -p commit -m x",
+        "git --git-dir .git commit -m x",
+        "git --work-tree=. commit -m x",
+        "git -C . --no-pager commit -m x",
+    ],
+)
+def test_global_git_options_before_commit_are_still_scanned(repo, command):
+    stage(repo, "leak.py", f'token = "{FAKE_TOKEN}"\n')  # pragma: allowlist secret
+    assert commit_guard.check_command(command, repo) is not None
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["git commit README.md -m x", "git commit -m x -- README.md", "git commit -i README.md"],
+)
+def test_commit_naming_files_is_refused(repo, command):
+    """`git commit <path>` commits unstaged contents the staged scan can't see."""
+    write(repo, "README.md", f'token = "{FAKE_TOKEN}"\n')  # pragma: allowlist secret
+    reason = commit_guard.check_command(command, repo)
+    assert reason is not None and "plain `git commit`" in reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    ['git commit -m "fix: drop -a flag usage"', "git commit -m x && git push --all"],
+)
+def test_a_flag_text_outside_the_commit_options_is_not_commit_all(repo, command):
+    """Only real `-a` triggers the unstaged scan; text in the message or a later
+    command doesn't (it once caused false blocks)."""
+    # Unstaged and not committed: only a real -a would include it.
+    write(repo, "README.md", f'token = "{FAKE_TOKEN}"\n')  # pragma: allowlist secret
+    assert commit_guard.check_command(command, repo) is None
+
+
+@pytest.mark.parametrize("name", [".env", "my key.pem", "café.pem"])
+def test_forbidden_files_with_no_content_or_unusual_names_are_blocked(repo, name):
+    write(repo, name, "")
+    run(repo, "add", name)
+    reason = commit_guard.check_command("git commit -m x", repo)
+    assert reason is not None and "forbidden file" in reason
+
+
+def test_external_diff_config_cannot_hide_added_lines(repo):
+    run(repo, "config", "diff.external", "true")
+    stage(repo, "leak.py", f'token = "{FAKE_TOKEN}"\n')  # pragma: allowlist secret
+    assert commit_guard.check_command("git commit -m x", repo) is not None
+
+
+# --- optional gitleaks scan ------------------------------------------------------------
+
+
+def fake_gitleaks(tmp_path: Path, exit_code: int) -> str:
+    script = tmp_path / "gitleaks"
+    script.write_text(f"#!/bin/sh\nexit {exit_code}\n", encoding="utf-8")
+    script.chmod(0o755)
+    return str(script)
+
+
+def test_gitleaks_finding_blocks_a_commit_our_patterns_miss(repo, tmp_path, monkeypatch):
+    fake = fake_gitleaks(tmp_path, commit_guard.GITLEAKS_FOUND)
+    monkeypatch.setattr(commit_guard.shutil, "which", lambda name: fake)
+    stage(repo, "app.py", "print('looks clean to our regexes')\n")
+    reason = commit_guard.check_command("git commit -m x", repo)
+    assert reason is not None and "gitleaks" in reason
+
+
+@pytest.mark.parametrize("exit_code", [0, 1, 126], ids=["clean", "error", "unusable"])
+def test_gitleaks_clean_or_failing_never_blocks_on_its_own(repo, tmp_path, monkeypatch, exit_code):
+    """Only gitleaks' own "found" code blocks; an old or broken install is ignored
+    because our scan already covered the commit."""
+    fake = fake_gitleaks(tmp_path, exit_code)
+    monkeypatch.setattr(commit_guard.shutil, "which", lambda name: fake)
+    stage(repo, "app.py", "print('ok')\n")
+    assert commit_guard.check_command("git commit -m x", repo) is None
+
+
+def test_our_scan_still_runs_when_gitleaks_says_clean(repo, tmp_path, monkeypatch):
+    fake = fake_gitleaks(tmp_path, 0)
+    monkeypatch.setattr(commit_guard.shutil, "which", lambda name: fake)
+    stage(repo, "leak.py", f'token = "{FAKE_TOKEN}"\n')  # pragma: allowlist secret
+    assert commit_guard.check_command("git commit -m x", repo) is not None

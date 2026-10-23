@@ -351,3 +351,30 @@ def test_symlinked_global_claude_md_is_still_read(cfg, tmp_path):
     real = write(tmp_path / "dotfiles" / "CLAUDE.md", "my rules")
     (cfg / "CLAUDE.md").symlink_to(real)
     assert str(cfg / "CLAUDE.md") in doctor.check(tmp_path)["instruction_files"]
+
+
+# --- audit regressions: user mistakes give a message, not a traceback -----------------
+
+
+def test_apply_in_a_read_only_config_dir_reports_an_error(cfg):
+    path = write(cfg / "settings.json", json.dumps({"model": "opus"}))
+    original = path.read_bytes()
+    cfg.chmod(0o500)
+    try:
+        result = doctor.apply_permissions()
+    finally:
+        cfg.chmod(0o700)
+    assert result["applied"] is False and "left unchanged" in result["error"]
+    assert path.read_bytes() == original
+    assert [p.name for p in cfg.iterdir()] == ["settings.json"]  # no backup, no temp file
+
+
+def test_record_onto_a_file_reports_an_error(tmp_path):
+    blocker = write(tmp_path / "not-a-dir", "x")
+    assert doctor.main(["record", "--data-dir", str(blocker)]) == 1
+
+
+def test_unreadable_settings_get_a_non_json_hint(cfg):
+    (cfg / "settings.json").mkdir()  # a directory where the file should be
+    errors = doctor.check(cfg)["errors"]
+    assert errors and "isn't valid JSON" not in errors[0]

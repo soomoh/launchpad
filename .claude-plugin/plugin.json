@@ -3,11 +3,22 @@
   "displayName": "Launchpad",
   "version": "0.1.0",
   "description": "A complete development workflow for Claude Code: planning, design, code and security review, tiered subagents, and a commit guard, with routing that makes each skill fire at the right moment.",
-  "author": { "name": "soomoh", "url": "https://github.com/soomoh" },
+  "author": {
+    "name": "soomoh",
+    "url": "https://github.com/soomoh"
+  },
   "homepage": "https://github.com/soomoh/launchpad",
   "repository": "https://github.com/soomoh/launchpad",
   "license": "MIT",
-  "keywords": ["workflow", "planning", "code-review", "security", "design", "subagents"],
+  "icon": "./.claude-plugin/icon.png",
+  "keywords": [
+    "workflow",
+    "planning",
+    "code-review",
+    "security",
+    "design",
+    "subagents"
+  ],
   "userConfig": {
     "inject_routing": {
       "type": "boolean",

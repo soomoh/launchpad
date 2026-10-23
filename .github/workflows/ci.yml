@@ -1,5 +1,5 @@
-# Mirrors the local workflow exactly: the same commands as the README's
-# "Development" section, on the oldest and a current supported Python.
+# Mirrors the local workflow exactly: the same commands as CONTRIBUTING.md
+# "Checks", on the oldest and a current supported Python.
 name: CI
 
 on:
@@ -22,8 +22,8 @@ jobs:
       matrix:
         python: ["3.10", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
         with:
           python-version: ${{ matrix.python }}
       - run: uv sync --locked
@@ -36,8 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
       # Pinned so a new release can't change (or compromise) CI unannounced.

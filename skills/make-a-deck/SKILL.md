@@ -68,8 +68,8 @@ slides** rather than polishing 15 privately before revealing anything. For each 
 - **No filler slides.** Slides titled "Why choose us?" or "About this deck" drain
   the audience's attention without payoff, so delete them.
 - **Charts.** Show only what matters, and remove columns and data points that
-  don't back the slide's point. Anything past a trivial chart goes through the
-  `dataviz` skill, with the deck's own tokens overriding its default palette.
+  don't back the slide's point. Charts take their colors and type from the
+  deck's own tokens, like everything else on the slide.
 
 Take spacing and color from the design system's tokens; add no new inline values.
 

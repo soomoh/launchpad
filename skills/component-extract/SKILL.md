@@ -44,7 +44,7 @@ One yes is enough to make it a component candidate. Then file each candidate und
 - **Name** — brief, in the usual convention: `Button`, `FormField`
 - **Purpose** — when to use it, in one sentence
 - **Variants** and **sizes**
-- **States** — the ones that apply; the state table is in
+- **States** — the ones that apply; the interactive-states table is in
   `${CLAUDE_PLUGIN_ROOT}/skills/design/references/a11y.md`
 - **Tokens used** — the color, spacing, and type tokens it depends on
 - **Composition** — the parts it is made from, e.g. `Card` uses `Button`

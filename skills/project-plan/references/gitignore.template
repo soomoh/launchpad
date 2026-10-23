@@ -17,14 +17,15 @@ data/
 *.sqlite
 *.sqlite3
 
-# Local working notes and config for you and Claude, not needed to build or
-# run: project instructions, plan, brand notes, threat model, audit, settings.
-# PRIVATE repos: replace this block with `.claude/settings.local.json` so the
-# notes are committed and backed up.
+# Local working notes for you and Claude, not needed to build or run: project
+# instructions, plan, brand notes, threat model, audit. Shared Claude Code
+# config (.claude/settings.json, agents, skills) stays committable.
+# PRIVATE repos: keep only the last two lines, so the notes are backed up.
 CLAUDE.md
-CLAUDE.local.md
 AGENTS.md
-.claude/
+.claude/*.md
+CLAUDE.local.md
+.claude/settings.local.json
 
 # Python
 .venv/

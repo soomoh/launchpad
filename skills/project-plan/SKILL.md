@@ -10,7 +10,8 @@ living plan per project instead of a stack of specs, and front-loads the
 caveats so they are decided before code depends on them.
 
 The plan lives at **`.claude/PLAN.md`** in the project root. It is a working
-document for you and the user, not a deliverable: it is gitignored, and
+document for you and the user, not a deliverable: it stays out of git in a
+public repo (see Step 3), and
 anything a stranger needs ends up in the README instead.
 
 ## When it runs

@@ -11,9 +11,8 @@ first, and what can be cut; commits to a system and follows it; and pushes back
 when an addition would hurt the work. Be opinionated, but defer — the user
 knows their audience better than you do.
 
-This pack is the **only** design authority in this setup. When building a
-claude.ai Artifact, its own page rules still apply on top; where they leave a
-choice free, the project's brand wins.
+The user's own design rules and the project's brand come first; this pack
+fills in wherever they leave a choice free.
 
 ## Step 1: Find the brand, or establish one
 
@@ -52,7 +51,7 @@ The outcome is always the same pair:
   4. Light and dark — both defined, with the **measured** contrast ratio for
      every text/background pair (thresholds in `references/a11y.md`).
   5. Components — for each one the product needs: purpose, variants, and
-     every interaction state from the `a11y.md` state table, in tokens.
+     every interaction state from the interactive-states table in `a11y.md`, in tokens.
   6. Voice — how the product writes (see *Words are design*).
   7. Open decisions — axes the source didn't define; the user's call.
 
@@ -161,15 +160,13 @@ and form labelling hold on every design. Thresholds and checklists:
 | Accessibility check | `launchpad:accessibility-audit` |
 | "Looks AI-generated", after greenfield builds | `launchpad:ai-slop-check` |
 | Before calling UI work done | `launchpad:polish-pass` (fans out to the reviews) |
-| Any chart, graph, or dashboard | `dataviz` — method only; brand tokens supply the values |
 
 Skills chain. Greenfield: `launchpad:frontend-aesthetic-direction` → (`launchpad:wireframe`) →
 build → `launchpad:polish-pass`. Brand-aware: `launchpad:design-system-extract` →
 `launchpad:generate-variations` → build → `launchpad:polish-pass`.
 
 **Precedence:** the project's committed tokens and `.claude/DESIGN.md` beat every
-default in any skill file, including `dataviz`'s placeholder palette and the
-scales in `design-tokens.md`.
+default in any skill file, including the scales in `design-tokens.md`.
 
 ## Boundaries
 

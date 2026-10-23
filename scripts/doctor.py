@@ -72,11 +72,13 @@ def read_json(path: Path) -> tuple[dict | None, str | None]:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
     except FileNotFoundError:
         return None, None
-    except (OSError, ValueError, RecursionError) as error:
+    except OSError as error:
+        return None, f"{path} could not be read ({error}); check it exists and is readable."
+    except (ValueError, RecursionError) as error:
         return (
             None,
-            f"{path} could not be read as JSON ({error}). Comments and trailing commas "
-            "aren't valid JSON; fix or move the file, then run setup again.",
+            f"{path} isn't valid JSON ({error}). Comments and trailing commas aren't "
+            "allowed; fix or move the file, then run setup again.",
         )
     if not isinstance(data, dict):
         return None, f"{path} should hold a JSON object; fix or move it first."
@@ -223,13 +225,14 @@ def write_atomically(target: Path, text: str) -> None:
     atomic), copies the original's mode, syncs it to disk, then renames over.
     """
     target.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(
+    tmp = tempfile.NamedTemporaryFile(
         "w", encoding="utf-8", dir=target.parent, prefix=f".{target.name}.", delete=False
-    ) as tmp:
-        tmp.write(text)
-        tmp.flush()
-        os.fsync(tmp.fileno())
+    )
     try:
+        with tmp:
+            tmp.write(text)
+            tmp.flush()
+            os.fsync(tmp.fileno())
         if target.exists():
             shutil.copymode(target, tmp.name)
         os.replace(tmp.name, target)
@@ -251,12 +254,19 @@ def apply_permissions() -> dict:
     if not missing:
         return {"applied": False, "added": {}, "note": "All recommended rules present."}
     settings = settings or {}
-    backup = backup_copy(path) if path.exists() else None
     permissions = settings.setdefault("permissions", {})
     for kind, rules in missing.items():
         permissions.setdefault(kind, [])
         permissions[kind] += rules
-    write_atomically(path, json.dumps(settings, indent=2, ensure_ascii=False) + "\n")
+    try:
+        backup = backup_copy(path) if path.exists() else None
+        write_atomically(path, json.dumps(settings, indent=2, ensure_ascii=False) + "\n")
+    except OSError as error:
+        return {
+            "applied": False,
+            "error": f"couldn't update {path} ({error}); it was left unchanged. "
+            "Check that the folder is writable, then run setup again.",
+        }
     return {
         "applied": True,
         "added": missing,
@@ -303,9 +313,12 @@ def record(data_dir: Path) -> dict:
             "error": f"--data-dir must be an absolute path, got {str(data_dir)!r}. "
             "Launchpad's data directory wasn't provided; nothing was recorded.",
         }
-    data_dir.mkdir(parents=True, exist_ok=True)
     entry = {"fingerprint": fingerprint(), "recorded_at": int(time.time())}
-    (data_dir / SETUP_RECORD).write_text(json.dumps(entry) + "\n", encoding="utf-8")
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+        (data_dir / SETUP_RECORD).write_text(json.dumps(entry) + "\n", encoding="utf-8")
+    except OSError as error:
+        return {"recorded": False, "error": f"couldn't write to {data_dir} ({error})."}
     return {"recorded": True, "path": str(data_dir / SETUP_RECORD)}
 
 
