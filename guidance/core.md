@@ -52,8 +52,9 @@ one-line fix doesn't need a plan or a review pass.
 | A coherent unit of work is finished (feature, fix, refactor) | Run the tests and the real program, then review the diff (`code-review` if available, else `launchpad:reviewer`); add `security-review` when security-relevant. Fix or report what's found |
 | Before a project is called ready, shared, or published | `launchpad:quality-audit` |
 
-When unsure whether a check applies, run it: a redundant check is cheap, an
-unreviewed change is not.
+Review a finished feature or meaningful fix, not every edit: batch a run of
+small changes into one review at the end. Reviews cost agents and time;
+an unreviewed feature costs more.
 
 ## Delegation
 

@@ -9,7 +9,9 @@ Review a design for accessibility problems and fix them. **Accessibility and goo
 
 Every threshold, checklist, and fallback value is kept in
 `${CLAUDE_PLUGIN_ROOT}/skills/design/references/a11y.md`. **Read it first**; this skill
-covers the procedure and leaves the numbers to that file.
+covers the procedure and leaves the numbers to that file. If
+`launchpad:polish-pass` is running on this design, skip this skill: the
+polish pass already includes the full accessibility review.
 
 ## Phase 1: Identify the surface
 

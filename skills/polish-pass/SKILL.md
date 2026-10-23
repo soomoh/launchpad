@@ -40,7 +40,8 @@ tokens file. For a small single-file design, reviewing inline is fine.
 the accessibility lens works through the `launchpad:accessibility-audit`
 checklist itself instead of using its fan-out procedure. The `launchpad:reviewer` agent
 already reports each finding with confidence and severity; Phase 3 does the
-filtering.
+filtering. This pass covers accessibility in full, so don't also run
+`launchpad:accessibility-audit` on the same design.
 
 1. **Accessibility** — every category in `${CLAUDE_PLUGIN_ROOT}/skills/design/references/a11y.md`: contrast
    (resolve and compute each pair), semantic HTML, keyboard and focus, motion,
