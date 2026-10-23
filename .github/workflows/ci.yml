@@ -41,5 +41,8 @@ jobs:
         with:
           node-version: "22"
       # Pinned so a new release can't change (or compromise) CI unannounced.
+      # Install with all scripts off, then run only Claude Code's own install
+      # script, which puts its native binary in place; nothing else runs.
       - run: npm install -g --ignore-scripts @anthropic-ai/claude-code@2.1.309
+      - run: node "$(npm root -g)/@anthropic-ai/claude-code/install.cjs"
       - run: claude plugin validate --strict .
