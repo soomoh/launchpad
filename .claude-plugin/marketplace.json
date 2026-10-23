@@ -1,0 +1,12 @@
+{
+  "name": "launchpad",
+  "owner": { "name": "soomoh", "url": "https://github.com/soomoh" },
+  "description": "Launchpad: a complete development workflow plugin for Claude Code.",
+  "plugins": [
+    {
+      "name": "launchpad",
+      "source": "./",
+      "description": "Planning, design, code and security review, tiered subagents, and a commit guard, with routing that makes each skill fire at the right moment."
+    }
+  ]
+}

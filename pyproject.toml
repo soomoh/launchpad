@@ -1,0 +1,22 @@
+[project]
+name = "launchpad"
+version = "0.1.0"
+description = "Development tooling for the Launchpad Claude Code plugin (the plugin itself has no Python dependencies)."
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "BLE"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

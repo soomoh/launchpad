@@ -1,0 +1,45 @@
+# Mirrors the local workflow exactly: the same commands as the README's
+# "Development" section, on the oldest and a current supported Python.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv sync --locked
+      - run: uv run ruff format --check scripts tests
+      - run: uv run ruff check scripts tests
+      - run: uv run pytest -q
+      - run: uv run python scripts/check_plugin.py
+
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # Pinned so a new release can't change (or compromise) CI unannounced.
+      - run: npm install -g --ignore-scripts @anthropic-ai/claude-code@2.1.309
+      - run: claude plugin validate --strict .

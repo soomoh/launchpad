@@ -1,0 +1,34 @@
+# Safety device: ignore whole classes of sensitive or local files.
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+.privacy-terms
+privacy-terms.local
+
+# Local working notes for the maintainer and Claude, not needed to install,
+# run, or contribute: project instructions, plan, audit notes.
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+.claude/
+
+# Eval run output: transcripts can contain local paths. Curated summaries
+# go in docs/evals/ instead.
+evals/results/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
