@@ -27,6 +27,13 @@ and offers recommended safety settings; it changes nothing without asking.
 - **Hooks** — session guidance that tells Claude when to use which skill, and a
   commit guard that blocks secrets and personal details.
 
+## Evidence
+
+In isolated evals against a no-plugin baseline, the right skill fired in
+18 of 18 runs, and Launchpad raised scores where a capable model skips steps
+on its own — regression tests, written plans, accessible UI. Full results and
+caveats: [docs/evals/RESULTS.md](docs/evals/RESULTS.md).
+
 ## Development
 
 ```bash

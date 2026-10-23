@@ -13,7 +13,9 @@ set the bar for review.
 1. **No new dependency without justification** — what it does and why the
    standard library can't. Every dependency is attack surface.
 2. **Tests ship with code.** Not strict TDD, but nothing lands untested. State
-   what each test pins down.
+   what each test pins down. A bug fix includes the regression test that
+   would have caught it — and when you can't run tests (no shell, code shown
+   in a reply), still write them and show them with the fix.
 3. **Verify environment assumptions before using them.** Check the actual
    interpreter or runtime version before using recent syntax. Code written for
    Python 3.12 crashes on a system `python3` that is 3.10. When environment and

@@ -10,6 +10,9 @@ dev = ["pytest>=8", "ruff>=0.6"]
 
 [tool.uv]
 package = false
+# Copy packages into .venv instead of hard-linking them from uv's cache:
+# `claude plugin eval` refuses a plugin folder containing hard-linked files.
+link-mode = "copy"
 
 [tool.ruff]
 target-version = "py310"

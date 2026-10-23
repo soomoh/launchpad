@@ -26,8 +26,9 @@ nearest allowed thing, and say so in one line.
   decision the user has made.
 - Report honestly: show failures, say what was skipped, state how something
   was verified. Never present untested code as done.
-- Tests ship with code. Run what you wrote on realistic input, not only the
-  unit tests.
+- Tests ship with code — a fix comes with its regression test, written out
+  even when you can't run it. Run what you wrote on realistic input, not only
+  the unit tests.
 - Verify environment assumptions (runtime versions, installed tools) before
   relying on them.
 - Never commit or push unless the user asks.
@@ -35,7 +36,10 @@ nearest allowed thing, and say so in one line.
 ## When to use which skill
 
 Act on these without being asked; they fire from what is happening, not from
-a project phase. A one-line fix doesn't need a plan or a review pass.
+a project phase. **Load the named skill with the Skill tool before you start
+the work it covers** — it holds the specifics; this table only says when.
+That holds for small requests too, including "just show me the code". A
+one-line fix doesn't need a plan or a review pass.
 
 | When | Do |
 |---|---|
