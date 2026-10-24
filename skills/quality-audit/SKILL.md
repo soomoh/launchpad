@@ -17,13 +17,25 @@ Run things; don't infer them. Record the real output.
    command, CI config, lockfile(s), licence, README.
 2. **The project's own checks** — its format, lint, and test commands exactly
    as CI or the README defines them. A red suite is a finding by itself.
+   **If the user didn't write this repo, look before running:** read the
+   package scripts (install/postinstall/test), test setup and config files,
+   and git hooks first; install with lifecycle scripts off
+   (`npm ci --ignore-scripts`); run the checks only inside the sandbox — never
+   via commands the user's settings exempt from it, such as browser tests —
+   and ask before anything that would leave it. Tooling that would act
+   outside the project when run (network calls, files beyond the repo, shell
+   out to the system) is a finding in its own right.
 3. **Secrets and personal data in history** —
    `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/commit_guard.py" --history <repo>`. Every hit is a
    blocker: deleting the line later does not unpublish it.
 4. **What `git add .` would take** — `git status --porcelain` for untracked,
    unignored files; anything personal or generated there means the
    `.gitignore` is not doing its job.
-5. **Dependency advisories** — the native audit per
+5. **Remote base branch** — with a remote, `git symbolic-ref
+   refs/remotes/origin/HEAD` must resolve; if it doesn't, set it
+   (`git remote set-head origin -a`) so base-branch diffs and
+   `security-review` work.
+6. **Dependency advisories** — the native audit per
    `${CLAUDE_PLUGIN_ROOT}/skills/security/references/supply-chain.md` (needs network; say
    so if unavailable).
 
@@ -42,7 +54,9 @@ after another and say so in one line.
 2. **Security** — `${CLAUDE_PLUGIN_ROOT}/skills/security/SKILL.md` red flags, then
    its `references/owasp-patterns.md` (and `llm-security.md` if an LLM is called):
    injection, missing authorization, XSS, SSRF, unsafe deserialization, path
-   traversal, secrets in code, headers and CORS, rate limits.
+   traversal, secrets in code, headers and CORS, rate limits — and the
+   project's own tooling: install scripts, test setup, and hooks that act
+   outside the repo when run.
 3. **Privacy** — personal data in code, fixtures, logs, error messages, or
    telemetry; data leaving the device without a named reason; real data where
    synthetic fixtures belong; absolute personal paths.

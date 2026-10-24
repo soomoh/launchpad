@@ -81,6 +81,8 @@ Apply these, and name them in code and review when you do:
 - Parametrize same-shape cases; built-in fixtures (`tmp_path`) over manual
   setup and teardown.
 - A regression test accompanies every bug fix.
+- **Real-browser checks use Playwright** — setup, sandbox-safe running, and
+  CI per `${CLAUDE_PLUGIN_ROOT}/skills/engineering/references/browser-testing.md`.
 
 ## Style
 

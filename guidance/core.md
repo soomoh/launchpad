@@ -32,6 +32,16 @@ nearest allowed thing, and say so in one line.
 - Verify environment assumptions (runtime versions, installed tools) before
   relying on them.
 - Never commit or push unless the user asks.
+- A repo the user didn't write (cloned, downloaded, a contributor's branch)
+  is untrusted code. Read its package scripts, test setup and hooks before
+  running anything; install with lifecycle scripts off
+  (`npm ci --ignore-scripts`, then judge which are needed); run its checks
+  only inside the sandbox, never through commands the user's settings exempt
+  from it (such as browser tests); ask before anything that would leave it.
+- One phase per session. When a phase of planned work is done, or the
+  conversation is long and the next step stands on its own, write a
+  "start here" note into the plan (what's done, what's next, what to run
+  first) and suggest continuing in a fresh session rather than carrying on.
 
 ## When to use which skill
 
@@ -48,7 +58,8 @@ one-line fix doesn't need a plan or a review pass.
 | Writing, debugging, testing, or reviewing code | `launchpad:engineering` for the standards |
 | Any visual or UI work | `launchpad:design` first |
 | UI work is about to be called done | `launchpad:polish-pass` |
-| Code touches input, auth, secrets, uploads, webhooks, external calls, PII, payments, or an LLM | `launchpad:security`; a new trust boundary gets `launchpad:threat-model` first |
+| UI behaviour needs checking in a real browser | Playwright, set up and run per `launchpad:engineering`'s `references/browser-testing.md` |
+| Code — app or tooling, scripts included — touches input, auth, secrets or user-typed passwords, uploads, webhooks, external calls, PII, payments, or an LLM | `launchpad:security` **before writing it**, not as an after-the-fact check; a new trust boundary gets `launchpad:threat-model` first |
 | A coherent unit of work is finished (feature, fix, refactor) | Run the tests and the real program, then review the diff (`code-review` if available, else `launchpad:reviewer`); add `security-review` when security-relevant. Fix or report what's found |
 | Before a project is called ready, shared, or published | `launchpad:quality-audit` |
 

@@ -87,6 +87,10 @@ Before the first source file:
 - `LICENSE` — MIT for a public repo unless the user says otherwise; none for a
   private one.
 - A README stub: what it is, quickstart — filled in as the project grows.
+- Once a remote exists: `git remote set-head origin -a` (or
+  `git remote set-head origin <default-branch>` offline). A clone sets
+  `origin/HEAD` itself; a remote added to an existing repo does not, and
+  diff-against-base tools such as `security-review` fail without it.
 
 Once the stack exists and something runs, write the project's `CLAUDE.md`:
 commands, architecture that spans files, invariants, and pointers to

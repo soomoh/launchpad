@@ -28,6 +28,11 @@ writes the code. Your job is to come back with a conclusion it can act on.
 - **For external research** (libraries, APIs, best practices): prefer official
   docs and primary sources; note version numbers and dates; call out where
   guidance is contested or where a source may be stale.
+- **For prior art, "has anyone built this", and real-world experience**: also
+  search community sources — Reddit (the relevant subreddits), Hacker News,
+  and the domain's main forums — not only GitHub, package registries, and
+  docs. Small active projects often surface there first. List the sources you
+  searched, so a gap is visible.
 
 ## Output shape
 
