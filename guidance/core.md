@@ -26,59 +26,63 @@ nearest allowed thing, and say so in one line.
   decision the user has made.
 - Report honestly: show failures, say what was skipped, state how something
   was verified. Never present untested code as done.
-- Tests ship with code — a fix comes with its regression test, written out
-  even when you can't run it. Run what you wrote on realistic input, not only
-  the unit tests.
-- Verify environment assumptions (runtime versions, installed tools) before
-  relying on them.
 - Never commit or push unless the user asks.
-- A repo the user didn't write (cloned, downloaded, a contributor's branch)
-  is untrusted code. Read its package scripts, test setup and hooks before
-  running anything; install with lifecycle scripts off
-  (`npm ci --ignore-scripts`, then judge which are needed); run its checks
-  only inside the sandbox, never through commands the user's settings exempt
-  from it (such as browser tests); ask before anything that would leave it.
-- One phase per session. When a phase of planned work is done, or the
-  conversation is long and the next step stands on its own, write a
-  "start here" note into the plan (what's done, what's next, what to run
-  first) and suggest continuing in a fresh session rather than carrying on.
+- A repo the user didn't write is untrusted code. Read its package scripts,
+  test setup and hooks before running anything; install with lifecycle
+  scripts off; run its checks only inside the sandbox, never through commands
+  the user's settings exempt from it; ask before anything that would leave it.
 
-## When to use which skill
+## Checkpoints — these always fire
 
-Act on these without being asked; they fire from what is happening, not from
-a project phase. **Load the named skill with the Skill tool before you start
-the work it covers** — it holds the specifics; this table only says when.
-That holds for small requests too, including "just show me the code". A
-one-line fix doesn't need a plan or a review pass.
+Each row is a moment in the session and the action that always follows it;
+none is a judgment call. Load a named skill with the Skill tool, once per
+session, before the work it covers. A one-line fix needs only its tests.
 
-| When | Do |
+| Moment | Action |
 |---|---|
-| A new project, a major feature, or a real change of direction | `launchpad:project-plan` |
-| Returning to an existing project for substantial work | Read its CLAUDE.md/AGENTS.md, README, and plan docs first. Asked to improve or assess it → `launchpad:quality-audit` before changing code (plus `launchpad:polish-pass` for UI), then `launchpad:project-plan` |
-| Writing, debugging, testing, or reviewing code | `launchpad:engineering` for the standards |
-| Any visual or UI work | `launchpad:design` first |
-| UI work is about to be called done | `launchpad:polish-pass` |
-| UI behaviour needs checking in a real browser | Playwright, set up and run per `launchpad:engineering`'s `references/browser-testing.md` |
-| Code — app or tooling, scripts included — touches input, auth, secrets or user-typed passwords, uploads, webhooks, external calls, PII, payments, or an LLM | `launchpad:security` **before writing it**, not as an after-the-fact check; a new trust boundary gets `launchpad:threat-model` first |
-| A coherent unit of work is finished (feature, fix, refactor) | Run the tests and the real program, then review the diff (`code-review` if available, else `launchpad:reviewer`); add `security-review` when security-relevant. Fix or report what's found |
+| Starting work in an existing project | Read its CLAUDE.md/AGENTS.md, README and plan; run the plan's "run first" commands |
+| New project, major feature, or change of direction | `launchpad:project-plan` |
+| Asked to improve or assess a project | `launchpad:quality-audit` (+ `launchpad:polish-pass` for UI) before changing code |
+| Before the session's first code edit | `launchpad:engineering` |
+| Before the session's first UI edit | `launchpad:design` |
+| A brand is created or changed | `launchpad:ai-slop-check` on the proof, before applying it |
+| Before writing code that touches input, auth, secrets or passwords, uploads, webhooks, external calls, PII, payments, or an LLM | `launchpad:security`; a new trust boundary gets `launchpad:threat-model` first |
+| A UI change needs seeing or exercising | Playwright per `launchpad:engineering`'s `references/browser-testing.md`, screenshots included |
+| A unit of work is ready to commit | The review gate below |
+| A UI phase is about to be called done | `launchpad:polish-pass` |
 | Before a project is called ready, shared, or published | `launchpad:quality-audit` |
+| The plan's current phase is complete | Write the plan's "start here" note (done, next, run first); suggest a fresh session before the next phase |
 
-Review a finished feature or meaningful fix, not every edit: batch a run of
-small changes into one review at the end. Reviews cost agents and time;
-an unreviewed feature costs more.
+## Review gate — every commit-ready unit
+
+1. Run format, lint, unit tests, the browser suite if the UI changed, and the
+   real program on realistic input. Every fix ships with its regression test.
+2. Dispatch `launchpad:reviewer` agents in one message, in the background,
+   scoped to the uncommitted diff: **correctness** always, **accessibility**
+   if UI changed, **security** if the security checkpoint applied. Keep
+   working (visual checks) while they run.
+3. Verify each finding yourself, fix or report it, then stop for the commit.
+
+Skip step 2 only when the diff is docs, copy, or formatting alone; say so.
 
 ## Delegation
 
-The main session plans, decides, and reviews. Delegate by task size:
+The main session makes every design, product, and architecture decision and
+judges all agent output; an agent never signs off its own work. Dispatch is
+set by these rules, not chosen case by case:
 
-- **Deterministic tooling** (`sed`, codemods, scripts) for mechanical,
-  unambiguous transforms — before any model.
-- `launchpad:researcher` — read-only investigation and research.
-- `launchpad:reviewer` — one review lens per agent, evidence for every finding.
-- `launchpad:tester` — writing and running tests, root-cause reports.
-- `launchpad:implementer` — well-specified implementation and porting.
-- **Inline** — anything small, subtle, or needing judgment.
+- `launchpad:reviewer` — the review gate, and the fan-outs inside
+  polish-pass, accessibility-audit, and quality-audit.
+- `launchpad:researcher` — a question that needs more than five files read,
+  or any web research, when you need the conclusion rather than the text.
+- `launchpad:tester` — reproducing a reported bug, or adding five or more
+  same-shape test cases; hand it the behaviours to pin.
+- `launchpad:implementer` — a mechanical change you have fully specified that
+  spans three or more files.
+- Deterministic tooling (`sed`, codemods, scripts) before any agent for
+  unambiguous transforms.
+- Inline — everything else, including all UI composition and any change you
+  would have to explain twice.
 
-Prefer fewer, larger dispatches, each with an example, strict rules, and a
-self-check. Agents gather evidence; the main session judges it — an agent
-never signs off its own work.
+Each dispatch gets an example, strict rules, and a self-check. Independent
+dispatches go in one message, in the background, while you keep working.

@@ -66,8 +66,9 @@ Vague statements ("modern and clean") produce generic designs. Commit:
 ## Phase 5: Prove it small
 
 Build one small surface — a hero, a card, a button group with all states — in
-the direction and show it. Ask whether it reads as the three adjectives. A
-direction that fails small gets worse at scale; revise before going broader.
+the direction, run `launchpad:ai-slop-check` on it, then show it. Ask whether
+it reads as the three adjectives. A direction that fails small gets worse at
+scale; revise before going broader.
 
 ## Phase 6: Record the brand
 

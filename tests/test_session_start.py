@@ -23,7 +23,7 @@ import session_start
 
 ROOT = session_start.PLUGIN_ROOT
 
-CORE_PHRASE = "When to use which skill"
+CORE_PHRASE = "Checkpoints — these always fire"
 
 
 @pytest.fixture(autouse=True)

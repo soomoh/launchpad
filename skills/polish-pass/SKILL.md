@@ -34,7 +34,8 @@ finding.
 
 Send one message that launches four `launchpad:reviewer` agents (subagent_type `launchpad:reviewer`),
 each limited to this file and handed the paths to the brand doc and the
-tokens file. For a small single-file design, reviewing inline is fine.
+tokens file. Review inline only when the whole design is one file under 150
+lines.
 
 **Every agent makes one pass and spawns nothing** — agents can't start agents, so
 the accessibility lens works through the `launchpad:accessibility-audit`

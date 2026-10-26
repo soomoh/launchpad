@@ -46,9 +46,34 @@ Run through `npm run test:e2e` (or `npx playwright test`), never by starting
 a dev server in one command and a browser in another. Chromium needs local
 sockets the Bash sandbox blocks, and two sandboxed commands don't share
 `localhost`; the user's settings exclude exactly these two commands from the
-sandbox. If they still fail with `socket() failed: Operation not permitted`,
-the exclusion is missing — tell the user rather than bypassing the sandbox
-ad hoc.
+sandbox. Run them as they are — never add a sandbox bypass to them or to any
+other browser step. If they still fail with `socket() failed: Operation not
+permitted`, the exclusion is missing — tell the user rather than bypassing
+the sandbox ad hoc.
+
+## Visual checks (screenshots)
+
+Seeing a change — layout, both themes, phone width — goes through the same
+excluded command with a second config. Never hand-roll a browser script
+against a dev server started by another command: from the sandbox it can't
+reach that `localhost`.
+
+```ts
+// playwright.visual.config.ts — local only, not in CI
+import base from './playwright.config';
+// outputDir is a sibling: every e2e run wipes test-results/.
+export default { ...base, testDir: 'tests/visual', outputDir: 'test-results-visual' };
+```
+
+Gitignore `test-results-visual/`.
+
+Specs in `tests/visual/` load the synthetic fixtures (seed extra state
+through the app's own modules with `page.evaluate` when a screen needs it)
+and screenshot each screen to `test.info().outputPath('<name>.png')` at
+desktop and phone width (393px), light and dark (`test.use({ colorScheme,
+viewport })`). Run `npx playwright test -c playwright.visual.config.ts`, then
+read the PNGs. Keep `deviceScaleFactor` at 1 so image pixels are CSS pixels,
+and measure in the page (`getBoundingClientRect`) rather than by eye.
 
 **Only in repos the user wrote.** The exclusion runs the repo's test code
 outside the sandbox without asking. In a cloned or third-party repo, read its

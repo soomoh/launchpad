@@ -73,7 +73,8 @@ content throughout; placeholder copy hides layout problems.
 generated: the house-style clusters, template chrome, individual defaults, and
 templated copy. **Read it before committing to a direction or writing styles**,
 and treat each entry as a default to deliberately avoid unless the brief or
-brand asks for it. After a greenfield hi-fi build, run `launchpad:ai-slop-check`.
+brand asks for it. Run `launchpad:ai-slop-check` on a new brand's proof and
+after any greenfield hi-fi build.
 
 Spend boldness in one place: one memorable element, everything around it
 quiet and disciplined. Before calling something finished, remove one

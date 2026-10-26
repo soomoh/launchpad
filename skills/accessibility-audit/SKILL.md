@@ -26,7 +26,7 @@ From the main session, send one message that launches four `launchpad:reviewer` 
 a11y reference. The `launchpad:reviewer` agent reports every finding, borderline ones
 too, with confidence and severity; aggregation does the filtering.
 
-**Already inside an agent, or auditing a small file?** Agents can't start agents,
+**Already inside an agent, or auditing one file under 150 lines?** Agents can't start agents,
 so cover the four categories below yourself in a single pass.
 
 1. **Contrast and color** — resolve each color pair you can and compute its real

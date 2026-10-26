@@ -10,7 +10,7 @@ and agents plus a few small Python scripts (standard library only, Python
 |---|---|
 | `skills/<name>/SKILL.md` | One skill each. The `description` decides when it fires |
 | `agents/*.md` | The four subagents |
-| `guidance/core.md` | Guidance added to every session: priorities and when to use which skill |
+| `guidance/core.md` | Guidance added to every session: priorities, checkpoints, review gate, delegation |
 | `hooks/hooks.json` | Runs `scripts/session_start.py` at session start and `scripts/commit_guard.py` before shell commands |
 | `scripts/doctor.py` | The checks and settings merge behind `/launchpad:setup` |
 | `scripts/check_plugin.py` | Consistency checks for the whole plugin |

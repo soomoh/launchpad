@@ -6,7 +6,7 @@ description: Whole-codebase audit against the standard of a well-run open-source
 # Quality audit — would a stranger trust this repo?
 
 The bar: a repository you would be comfortable publishing today. Diff-level
-review (`code-review`, `security-review`) catches what changed; this catches
+review (the review gate in Launchpad's session guidance) catches what changed; this catches
 what accumulated — including what is buried in history.
 
 ## Phase 1: Ground truth (inline, before any agent)
