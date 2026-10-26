@@ -1,7 +1,7 @@
 {
   "name": "launchpad",
   "displayName": "Launchpad",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A complete development workflow for Claude Code: planning, design, code and security review, tiered subagents, and a commit guard, with routing that makes each skill fire at the right moment.",
   "author": {
     "name": "soomoh",

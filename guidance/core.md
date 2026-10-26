@@ -46,21 +46,25 @@ session, before the work it covers. A one-line fix needs only its tests.
 | Before the session's first code edit | `launchpad:engineering` |
 | Before the session's first UI edit | `launchpad:design` |
 | A brand is created or changed | `launchpad:ai-slop-check` on the proof, before applying it |
-| Before writing code that touches input, auth, secrets or passwords, uploads, webhooks, external calls, PII, payments, or an LLM | `launchpad:security`; a new trust boundary gets `launchpad:threat-model` first |
+| Before writing code that touches input, auth, secrets or passwords, uploads, webhooks, external calls, PII, payments, or an LLM, including parsers or extractors run on user-supplied files | `launchpad:security`; a new trust boundary gets `launchpad:threat-model` first |
 | A UI change needs seeing or exercising | Playwright per `launchpad:engineering`'s `references/browser-testing.md`, screenshots included |
 | A unit of work is ready to commit | The review gate below |
 | A UI phase is about to be called done | `launchpad:polish-pass` |
 | Before a project is called ready, shared, or published | `launchpad:quality-audit` |
-| The plan's current phase is complete | Write the plan's "start here" note (done, next, run first); suggest a fresh session before the next phase |
+| The plan's current phase is complete, or the user is about to start a fresh session after substantial work | `launchpad:retrospective`; write the plan's "start here" note (done, next, run first); suggest a fresh session before the next phase |
+| The user commits, more work follows, and the session is long (context over ~250k tokens, where a usage tool shows it) | Update the plan's "start here" note; suggest a fresh session for the next unit |
 
 ## Review gate — every commit-ready unit
 
 1. Run format, lint, unit tests, the browser suite if the UI changed, and the
    real program on realistic input. Every fix ships with its regression test.
-2. Dispatch `launchpad:reviewer` agents in one message, in the background,
-   scoped to the uncommitted diff: **correctness** always, **accessibility**
-   if UI changed, **security** if the security checkpoint applied. Keep
-   working (visual checks) while they run.
+2. Dispatch `launchpad:reviewer` in the background, scoped to the
+   uncommitted diff, with every lens that applies: **correctness** always
+   (including: does any user-facing text, label or status claim more than
+   the data shows?), **accessibility** if UI changed, **security** if the
+   security checkpoint applied. One reviewer covers them all for an ordinary
+   diff (one feature or fix); one per lens, in one message, only for a large
+   or high-risk diff. Keep working (visual checks) while it runs.
 3. Verify each finding yourself, fix or report it, then stop for the commit.
 
 Skip step 2 only when the diff is docs, copy, or formatting alone; say so.

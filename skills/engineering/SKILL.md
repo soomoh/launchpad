@@ -22,6 +22,9 @@ set the bar for review.
    intent disagree, flag it — don't silently downgrade.
 4. **Run what you wrote.** Executing the real program on realistic input
    catches what unit tests and type checkers miss.
+5. **Multi-line edits use the Edit tool.** A scripted edit asserts exactly
+   one match per replacement, and never slices between two index lookups
+   without asserting their order.
 
 ## Debugging: root cause, not symptoms
 
