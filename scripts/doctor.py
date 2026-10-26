@@ -25,6 +25,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import sys
 import tempfile
 import time
@@ -65,9 +66,29 @@ def config_dir() -> Path:
     return Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
 
 
-def read_json(path: Path) -> tuple[dict | None, str | None]:
-    """(parsed object, None), (None, None) when absent, or (None, error) when unusable."""
+def is_special(path: Path) -> bool:
+    """True when `path` (followed through links) is a device, FIFO, or socket.
+
+    Claude Code's sandbox mounts a /dev/null device at protected paths that don't
+    exist yet, so a special file where settings belong means "no file". Stat
+    errors return False so the caller's own read reports them (e.g. a link loop).
+    """
     try:
+        mode = path.stat().st_mode
+    except OSError:
+        return False
+    return not (stat.S_ISREG(mode) or stat.S_ISDIR(mode))
+
+
+def read_json(path: Path) -> tuple[dict | None, str | None]:
+    """(parsed object, None), (None, error) when unusable, or (None, None) when absent.
+
+    Absent includes a special file (see is_special); a directory is an error.
+    """
+    try:
+        # Checked before opening: a placeholder device fails with EACCES, a FIFO hangs.
+        if is_special(path):
+            return None, None
         # utf-8-sig: editors on Windows often save settings with a byte-order mark.
         data = json.loads(path.read_text(encoding="utf-8-sig"))
     except FileNotFoundError:
@@ -246,6 +267,15 @@ def apply_permissions() -> dict:
     # Write through a symlinked settings.json (dotfile repos) to its real file, so
     # the link survives the atomic rename.
     path = (config_dir() / "settings.json").resolve()
+    if is_special(path):
+        # read_json calls this absent, but backing up or replacing it would be wrong:
+        # it's a sandbox placeholder, or a link to a device such as /dev/null.
+        return {
+            "applied": False,
+            "error": f"{path} isn't a regular file (Claude Code's sandbox puts a "
+            "placeholder device at protected paths); it was left unchanged. Run setup "
+            "outside the sandbox, or replace it with a real settings.json.",
+        }
     settings, error = read_json(path)  # read once: what we check is what we write
     if not error:
         missing, error = missing_from(settings, path)

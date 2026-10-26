@@ -11,6 +11,7 @@ Catastrophic failure modes pinned here:
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -73,6 +74,41 @@ def test_malformed_settings_reported_not_raised(cfg, project, content):
     write(cfg / "settings.json", content)
     result = doctor.check(project)
     assert any(str(cfg / "settings.json") in e for e in result["errors"])
+
+
+def make_special(path: Path, kind: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if kind == "device":
+        path.symlink_to("/dev/null")
+    else:
+        os.mkfifo(path)  # reading one with no writer would hang the doctor
+
+
+SPECIAL = [
+    pytest.param(
+        "device", marks=pytest.mark.skipif(not Path("/dev/null").exists(), reason="no /dev/null")
+    ),
+    pytest.param("fifo", marks=pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no mkfifo")),
+]
+
+
+@pytest.mark.parametrize("kind", SPECIAL)
+def test_special_file_settings_count_as_absent(cfg, project, kind):
+    # Claude Code's sandbox mounts a /dev/null device at protected paths that don't
+    # exist yet; setup ran inside it and reported them as unreadable settings.
+    for path in (cfg / "settings.json", project / ".claude" / "settings.local.json"):
+        make_special(path, kind)
+    result = doctor.check(project)
+    assert result["errors"] == []
+    assert result["hooks_disabled_in"] == []
+
+
+def test_settings_link_loop_is_reported_not_absent(project):
+    loop = project / ".claude" / "settings.json"
+    loop.parent.mkdir()
+    loop.symlink_to(loop)
+    errors = doctor.check(project)["errors"]
+    assert len(errors) == 1 and "could not be read" in errors[0]
 
 
 def test_agent_overlap_uses_frontmatter_name_not_filename(cfg, project):
@@ -204,6 +240,17 @@ def test_apply_refuses_unusable_settings_and_leaves_them_untouched(cfg, content)
     assert result["error"]
     assert path.read_bytes() == before
     assert list(cfg.glob("settings.json.launchpad-backup-*")) == []
+
+
+@pytest.mark.parametrize("kind", SPECIAL)
+def test_apply_refuses_special_file_settings_and_writes_nothing(cfg, kind):
+    make_special(cfg / "settings.json", kind)
+    before = sorted(cfg.iterdir())
+    result = doctor.apply_permissions()
+    assert result["applied"] is False
+    assert "isn't a regular file" in result["error"]
+    assert sorted(cfg.iterdir()) == before  # no backup, no temp file
+    assert list(Path("/dev").glob("null.launchpad-backup-*")) == []
 
 
 # --- fingerprint / record -----------------------------------------------------------
