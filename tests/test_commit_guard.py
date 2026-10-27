@@ -160,6 +160,107 @@ def test_add_and_commit_in_one_command_is_refused(repo):
     assert reason is not None and "separate commands" in reason
 
 
+CHAINED_HEREDOCS = """git commit -F - <<'EOF' && \\
+First subject
+
+Body.
+EOF
+git commit -F - <<'EOF'
+Second subject
+EOF"""
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        CHAINED_HEREDOCS,
+        "git commit -m a && git commit -m b",
+        "git commit -m a; git commit -m b",
+        "git commit -m a\ngit commit -m b",
+        "git -C x commit -m a || git --no-pager commit -m b",
+    ],
+)
+def test_several_commits_in_one_command_are_refused(repo, command):
+    """Regression: chained heredoc commits lost their subject lines."""
+    stage(repo, "app.py", "print('ok')\n")
+    reason = commit_guard.check_command(command, repo)
+    assert reason is not None and "git commit -F" in reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'git commit -m "fix the git commit guard"',
+        "git commit -F msg.txt && git push",
+        "git commit -m \"$(cat <<'EOF'\nSubject\n\nmentions git commit -m\nEOF\n)\"",
+        "git commit -m \"$(cat <<'EOF'\nSubject\n\ngit commit -m x\nEOF\n)\"",
+        "git commit -F - <<'EOF'\nSubject\ngit commit again\nEOF",
+        "git commit -m 'a\ngit commit b'",
+        "git commit -m 'a; git commit b'",
+        'git commit -m "x && git commit y"',
+        "cat > f.sh <<'EOF'\ngit commit -m a\ngit commit -m b\nEOF",
+        "cat > f.sh <<EOF\nit's\ngit commit -m a; git commit -m b\nEOF",
+    ],
+)
+def test_a_single_commit_is_not_counted_twice(command):
+    """Commit text inside a heredoc body or quotes never counts as a command."""
+    assert commit_guard.commits_in(command) <= 1
+
+
+def test_a_single_quoted_message_commit_is_allowed(repo):
+    stage(repo, "app.py", "print('ok')\n")
+    assert commit_guard.check_command('git commit -m "a; git commit b"', repo) is None
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git commit -m x 2>&1",
+        "git commit -m x > log.txt",
+        "git commit -m x &>/dev/null",
+        "git commit -F - <<'EOF'\nSubject\n\nBody naming app.py\nEOF",
+        "git commit -F - <<EOF\nSubject\nEOF",
+        "cat > notes.md <<'EOF'\nthen git commit -m done\nEOF",
+    ],
+)
+def test_redirections_and_heredoc_bodies_are_not_paths(repo, command):
+    """Regression: these were refused as `git commit <paths>`."""
+    stage(repo, "app.py", "print('ok')\n")
+    assert commit_guard.check_command(command, repo) is None
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'echo "about to git commit now" && git commit -o secret.py -m x',
+        "echo 'git commit soon' && git commit -m x secret.py",
+        "git commit -m x secret.py 2>&1",
+        "git commit -m x < /dev/null secret.py",
+        "git commit -m x \\\n  secret.py",
+        "bash <<'EOF'\ngit commit secret.py\nEOF",
+    ],
+)
+def test_paths_on_the_real_commit_are_still_refused(repo, command):
+    """Regression: an earlier quoted mention hid the real commit's paths."""
+    reason = commit_guard.check_command(command, repo)
+    assert reason is not None and "Naming files" in reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "echo 'git commit soon' && git commit -a -m x",
+        'git commit -m "line one\nline two" -a',
+        "git commit -m x \\\n  -a",
+        "git commit -a -F - <<'EOF'\nDon't lose the subject\nEOF",
+        "git commit -F - <<'EOF' -a\nIt's a fix\nEOF",
+    ],
+)
+def test_commit_all_is_seen_past_mentions_and_line_breaks(repo, command):
+    write(repo, "README.md", f'TOKEN = "{FAKE_TOKEN}"\n')  # pragma: allowlist secret
+    assert commit_guard.check_command(command, repo) is not None
+
+
 def test_commit_all_scans_unstaged_tracked_changes(repo):
     # Tracked, modified, not staged.
     write(repo, "README.md", f'TOKEN = "{FAKE_TOKEN}"\n')  # pragma: allowlist secret

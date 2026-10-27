@@ -69,6 +69,10 @@ GLOBAL_OPTS = (
 )
 GIT_COMMIT = re.compile(rf"\bgit\b{GLOBAL_OPTS}\s+commit(?=$|[\s;&|)])")
 GIT_ADD = re.compile(rf"\bgit\b{GLOBAL_OPTS}\s+add(?=$|[\s;&|)])")
+# A commit in command position: at the start, or after a separator or line break.
+COMMAND_COMMIT = re.compile(rf"(?:^|[;&|({{\n])\s*git\b{GLOBAL_OPTS}\s+commit(?=$|[\s;&|)])")
+HEREDOC_START = re.compile(r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n")
+QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
 GIT_DIR_FLAG = re.compile(r"\bgit\s+-C\s+(\"[^\"]+\"|'[^']+'|\S+)")
 LEADING_CD = re.compile(r"^\s*cd\s+(\"[^\"]+\"|'[^']+'|\S+)\s*(&&|;)")
 # `git commit` options whose value is the next argument. Anything else that isn't an
@@ -227,42 +231,75 @@ def repo_root_for(command: str, cwd: Path) -> Path:
 def commit_options(rest: str) -> tuple[bool, bool]:
     """(commits all tracked changes, names paths) for the text after `git commit`.
 
-    Reads arguments up to the first shell separator, so a `-a` inside the message or a
-    later `git push --all` doesn't count.
+    Reads arguments up to the first shell separator or unquoted line break, so a `-a`
+    inside the message, a later `git push --all`, or a heredoc body doesn't count.
+    Redirections (`2>&1`, `> log`, `<<EOF`) and their targets are not paths.
     """
     try:
-        lexer = shlex.shlex(rest, posix=True, punctuation_chars=";&|")
+        # Unquoted newlines become separator tokens; a line continuation is a space.
+        # Heredoc bodies go first: an apostrophe in one ("don't") would end the parse.
+        text = without_heredoc_bodies(rest).replace("\\\n", " ")
+        lexer = shlex.shlex(text, posix=True, punctuation_chars=";&|<>\n")
+        lexer.whitespace = " \t\r"
         lexer.whitespace_split = True
         tokens = list(lexer)
-    except ValueError:  # unbalanced quotes: let git reject it
+    except ValueError:  # unbalanced quotes: a mention in text, or a command bash rejects
         return False, False
     commit_all = names_paths = False
-    args = iter(tokens)
-    for token in args:
-        if token and token[0] in ";&|":
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        i += 1
+        if token.startswith(("<", ">", "&>")):
+            i += 1  # the redirection's target: a file, fd, or heredoc delimiter
+            continue
+        if token.isdigit() and i < len(tokens) and tokens[i].startswith(("<", ">")):
+            continue  # the fd in `2>&1`
+        if token.startswith((";", "&", "|", "\n")):
             break
         if token == "--":
-            names_paths = any(True for _ in args)
+            names_paths = any(not t.startswith((";", "&", "|", "\n")) for t in tokens[i:])
             break
         if token in ("-a", "--all"):
             commit_all = True
         elif token in PATHSPEC_OPTIONS or token.startswith("--pathspec-from-file="):
             names_paths = True
         elif token in VALUE_OPTIONS:
-            next(args, None)
+            i += 1
         elif token.startswith("--"):
             continue  # --long or --long=value
         elif token.startswith("-") and len(token) > 1:
             flags = token[1:]
-            value_at = next((i for i, f in enumerate(flags) if f in SHORT_VALUE_FLAGS), None)
+            value_at = next((j for j, f in enumerate(flags) if f in SHORT_VALUE_FLAGS), None)
             head = flags if value_at is None else flags[:value_at]
             commit_all = commit_all or "a" in head
             names_paths = names_paths or "i" in head or "o" in head
             if value_at == len(flags) - 1:
-                next(args, None)  # e.g. `-am "msg"`: the value is the next argument
+                i += 1  # e.g. `-am "msg"`: the value is the next argument
         else:
             names_paths = True
     return commit_all, names_paths
+
+
+def without_heredoc_bodies(text: str) -> str:
+    """`text` with each heredoc's body and closing delimiter removed; the opening line
+    stays, so commands after `<<EOF` on that line still count. A heredoc without its
+    closing delimiter is left as is."""
+    pos = 0
+    while match := HEREDOC_START.search(text, pos):
+        end = re.search(rf"^\t*{re.escape(match.group(2))}$", text[match.end() :], re.M)
+        if end is None:
+            break
+        text = text[: match.end()] + text[match.end() + end.end() :]
+        pos = match.end()
+    return text
+
+
+def commits_in(command: str) -> int:
+    """How many `git commit` commands `command` runs, ignoring heredoc bodies and quoted
+    text, so a message or a written file that mentions `git commit` isn't counted.
+    Heredocs go first: their bodies can hold unbalanced quotes."""
+    return len(COMMAND_COMMIT.findall(QUOTED.sub("''", without_heredoc_bodies(command))))
 
 
 def check_command(command: str, cwd: Path) -> str | None:
@@ -277,11 +314,22 @@ def check_command(command: str, cwd: Path) -> str | None:
             "commit guard: run `git add` and `git commit` as separate commands, "
             "so the guard can scan what is actually staged."
         )
+    # Several heredoc commits chained with `&& \` have lost their subject lines.
+    if commits_in(command) > 1:
+        return (
+            "commit guard: make one commit per command. Write each message to a file "
+            "and run `git commit -F <file>`."
+        )
     try:
         root = Path(git(repo_root_for(command, cwd), "rev-parse", "--show-toplevel").strip())
     except (subprocess.CalledProcessError, OSError):
         return None  # not a repo: git commit will fail on its own
-    commit_all, names_paths = commit_options(command[commit.end() :])
+    # Read the options of every match: an earlier mention in quoted text must not hide
+    # the real commit's `-a` or paths. An extra match only ever adds caution.
+    commit_all = names_paths = False
+    for match in GIT_COMMIT.finditer(command):
+        match_all, match_paths = commit_options(command[match.end() :])
+        commit_all, names_paths = commit_all or match_all, names_paths or match_paths
     if names_paths:
         return (
             "commit guard: commit with a plain `git commit` after staging the files with "
