@@ -57,11 +57,13 @@ them all.
 
 ## Optional extras
 
-- **Stronger secret checks:** install [gitleaks](https://github.com/gitleaks/gitleaks).
-  Launchpad's guard uses it automatically when it's there.
+- **Stronger secret checks:** install [gitleaks](https://github.com/gitleaks/gitleaks)
+  8.19 or newer (some Linux package managers ship older versions, which the
+  guard skips). Launchpad's guard uses it automatically when it's there.
 - **Block your own personal details:** list your name, email, or address, one
   per line, in `~/.claude/privacy-terms.local`. The guard will refuse commits
-  that contain them. Once you've run setup, Claude can't read this file.
+  that contain them. If you accept setup's safety settings, Claude's file
+  tools can't read this file.
 
 ## Already have your own setup?
 
