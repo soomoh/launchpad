@@ -253,52 +253,6 @@ def test_apply_refuses_special_file_settings_and_writes_nothing(cfg, kind):
     assert list(Path("/dev").glob("null.launchpad-backup-*")) == []
 
 
-# --- fingerprint / record -----------------------------------------------------------
-
-
-def test_record_writes_current_fingerprint(tmp_path):
-    data_dir = tmp_path / "data"
-    result = doctor.record(data_dir)
-    entry = json.loads((data_dir / doctor.SETUP_RECORD).read_text(encoding="utf-8"))
-    assert result["recorded"] is True
-    assert entry["fingerprint"] == doctor.fingerprint()
-
-
-def test_fingerprint_stable_when_nothing_changes(cfg):
-    write(cfg / "CLAUDE.md", "rules")
-    assert doctor.fingerprint() == doctor.fingerprint()
-
-
-@pytest.mark.parametrize(
-    "change",
-    [
-        lambda cfg: write(cfg / "CLAUDE.md", "changed"),
-        lambda cfg: write(cfg / "settings.json", '{"disableAllHooks": true}'),
-        lambda cfg: write(
-            cfg / "settings.json",
-            json.dumps({"permissions": {"deny": [doctor.RECOMMENDED["deny"][0]]}}),
-        ),
-        lambda cfg: write(cfg / "agents" / "new.md", "---\nname: new\n---\n"),
-        lambda cfg: write(cfg / "skills" / "new" / "SKILL.md", "x"),
-    ],
-    ids=["claude-md", "hooks-off", "recommended-rule", "agent", "skill"],
-)
-def test_fingerprint_changes_with_user_config(cfg, change):
-    write(cfg / "CLAUDE.md", "rules")
-    before = doctor.fingerprint()
-    change(cfg)
-    assert doctor.fingerprint() != before
-
-
-def test_fingerprint_ignores_unrelated_settings(cfg):
-    """Claude Code rewrites settings.json for many reasons (model, theme, allow rules).
-    Those must not trigger a re-run-setup nudge every session."""
-    write(cfg / "settings.json", json.dumps({"model": "opus"}))
-    before = doctor.fingerprint()
-    write(cfg / "settings.json", json.dumps({"model": "sonnet", "theme": "dark"}, indent=4))
-    assert doctor.fingerprint() == before
-
-
 # --- main ---------------------------------------------------------------------------
 
 
@@ -372,15 +326,7 @@ def test_deeply_nested_settings_are_an_error_not_a_crash(cfg):
     assert doctor.check(cfg)["errors"]
 
 
-# --- review regressions: record and untrusted project files ---------------------------
-
-
-@pytest.mark.parametrize("value", ["", "relative/dir"], ids=["empty", "relative"])
-def test_record_refuses_a_missing_or_relative_data_dir(monkeypatch, tmp_path, value):
-    """An unsubstituted ${CLAUDE_PLUGIN_DATA} arrives as "" — never write into cwd."""
-    monkeypatch.chdir(tmp_path)
-    assert doctor.main(["record", "--data-dir", value]) == 1
-    assert not list(tmp_path.rglob(doctor.SETUP_RECORD))
+# --- review regressions: untrusted project files --------------------------------------
 
 
 def test_project_symlink_leading_outside_the_project_is_not_read(cfg, project, tmp_path):
@@ -414,11 +360,6 @@ def test_apply_in_a_read_only_config_dir_reports_an_error(cfg):
     assert result["applied"] is False and "left unchanged" in result["error"]
     assert path.read_bytes() == original
     assert [p.name for p in cfg.iterdir()] == ["settings.json"]  # no backup, no temp file
-
-
-def test_record_onto_a_file_reports_an_error(tmp_path):
-    blocker = write(tmp_path / "not-a-dir", "x")
-    assert doctor.main(["record", "--data-dir", str(blocker)]) == 1
 
 
 def test_unreadable_settings_get_a_non_json_hint(cfg):

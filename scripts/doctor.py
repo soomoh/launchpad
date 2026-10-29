@@ -9,8 +9,6 @@ Subcommands (each prints JSON on stdout):
 - `permissions [--apply]` — the recommended rules missing from the user's
   settings.json. With `--apply`, merges them in after writing a timestamped backup.
   Existing rules and every other setting are left as they were.
-- `record --data-dir DIR` — stores a fingerprint of the user's configuration so the
-  session-start hook can tell when it changes.
 
 Everything stays on this machine; nothing here touches the network. Judging what the
 findings mean (does a CLAUDE.md rule contradict ours?) is the setup skill's job.
@@ -20,7 +18,6 @@ Standard library only; runs on python3 3.10+.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -56,7 +53,6 @@ RECOMMENDED = {
     ],
 }
 
-SETUP_RECORD = "setup.json"
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---", re.DOTALL)
 NAME_LINE = re.compile(r"^name:\s*(\S+)", re.MULTILINE)
 
@@ -304,54 +300,6 @@ def apply_permissions() -> dict:
     }
 
 
-def fingerprint() -> str:
-    """Hash of the user-level configuration that can change how Launchpad behaves.
-
-    Only the parts setup actually judges: the global CLAUDE.md, whether hooks are
-    off, which recommended rules are present, and skill/agent names. Hashing all of
-    settings.json would nudge after every unrelated change Claude Code writes there.
-    """
-    home = config_dir()
-    digest = hashlib.sha256()
-    try:
-        digest.update((home / "CLAUDE.md").read_bytes())
-    except OSError:
-        digest.update(b"<absent>")
-    settings, _ = read_json(home / "settings.json")
-    settings = settings or {}
-    permissions = settings.get("permissions")
-    permissions = permissions if isinstance(permissions, dict) else {}
-    present = sorted(
-        f"{kind}:{rule}"
-        for kind, rules in RECOMMENDED.items()
-        for rule in rules
-        if isinstance(permissions.get(kind), list) and rule in permissions[kind]
-    )
-    relevant = {"disableAllHooks": settings.get("disableAllHooks"), "rules": present}
-    digest.update(b"\0" + json.dumps(relevant, sort_keys=True).encode())
-    for kind, name, _ in sorted(user_definitions(home, trusted=True)):
-        digest.update(f"\0{kind}:{name}".encode())
-    return digest.hexdigest()
-
-
-def record(data_dir: Path) -> dict:
-    # An unsubstituted ${CLAUDE_PLUGIN_DATA} arrives as "" (= the current directory):
-    # refuse rather than drop setup.json into the user's project.
-    if not data_dir.is_absolute():
-        return {
-            "recorded": False,
-            "error": f"--data-dir must be an absolute path, got {str(data_dir)!r}. "
-            "Launchpad's data directory wasn't provided; nothing was recorded.",
-        }
-    entry = {"fingerprint": fingerprint(), "recorded_at": int(time.time())}
-    try:
-        data_dir.mkdir(parents=True, exist_ok=True)
-        (data_dir / SETUP_RECORD).write_text(json.dumps(entry) + "\n", encoding="utf-8")
-    except OSError as error:
-        return {"recorded": False, "error": f"couldn't write to {data_dir} ({error})."}
-    return {"recorded": True, "path": str(data_dir / SETUP_RECORD)}
-
-
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -359,19 +307,15 @@ def main(argv: list[str]) -> int:
     check_cmd.add_argument("--project", type=Path, default=Path.cwd())
     perm_cmd = commands.add_parser("permissions")
     perm_cmd.add_argument("--apply", action="store_true")
-    record_cmd = commands.add_parser("record")
-    record_cmd.add_argument("--data-dir", required=True)
     args = parser.parse_args(argv)
 
     if args.command == "check":
         result = check(args.project.resolve())
     elif args.command == "permissions" and args.apply:
         result = apply_permissions()
-    elif args.command == "permissions":
+    else:
         missing, error = missing_permissions()
         result = {"missing": missing, "error": error}
-    else:
-        result = record(Path(args.data_dir))
     print(json.dumps(result, indent=2))
     return 1 if result.get("error") else 0
 

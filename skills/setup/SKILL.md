@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Set up Launchpad on this machine, or re-check it — finds conflicts between the user's existing Claude Code setup (CLAUDE.md rules, their own skills and agents, settings) and Launchpad's workflow, offers to add recommended safety permissions, and records the result. Use when the user runs /launchpad:setup, asks to set up, configure, check, or troubleshoot Launchpad, or when Launchpad's session guidance says setup hasn't run or the configuration changed.
+description: Set up Launchpad on this machine, or re-check it — finds conflicts between the user's existing Claude Code setup (CLAUDE.md rules, their own skills and agents, settings) and Launchpad's workflow, and offers to add recommended safety permissions. Use when the user runs /launchpad:setup, or asks to set up, configure, check, or troubleshoot Launchpad.
 ---
 
 # Launchpad setup — check, propose, ask, apply
@@ -86,18 +86,7 @@ in `~/.claude/privacy-terms.local` or a gitignored `.privacy-terms` in a project
 **They create it themselves**; never ask them to type the terms into this
 conversation, and don't read the file.
 
-## Step 5: Record and summarize
-
-```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/doctor.py" record --data-dir "${CLAUDE_PLUGIN_DATA}"
-```
-
-If the command shows an empty `--data-dir` or reports an error, stop and tell
-the user setup couldn't be recorded — don't substitute a path yourself.
-
-This stores a fingerprint of their configuration, so Launchpad suggests
-re-running setup only when it changes. Record even when they declined every
-change — they've been asked.
+## Step 5: Summarize
 
 Close with a short summary: what was changed (with backup paths), what was
 kept as is and how Launchpad adapts, and that `/launchpad:setup` can be re-run
