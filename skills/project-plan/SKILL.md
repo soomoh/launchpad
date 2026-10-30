@@ -50,12 +50,18 @@ while you draft. Check the actual runtime versions before naming a stack.
 
 Keep it scannable — bullets over prose, a screen or two at most. Sections:
 
-1. **Goal** — one or two sentences, then non-goals.
+1. **Goal** — one or two sentences, then non-goals. When a later request
+   crosses a non-goal, say so once; if the user still wants it, move it into
+   Decisions.
 2. **Shape** — architecture in a paragraph (name the paradigm: local-first,
    client-server, CLI, static site…), the stack with a *why* per choice, and
    the directory layout. Prefer the user's stated stack defaults (their
-   CLAUDE.md), if any, unless a reason overrides them. Every runtime
-   dependency gets a one-line justification.
+   CLAUDE.md), if any, unless a reason overrides them. Default to as few
+   running pieces as the job needs — usually one app and one data store; each
+   extra service, container, build step, or framework, and each runtime
+   dependency, gets a one-line justification. Name the **stable surface**:
+   what others will depend on once it's shared (data format, schema, CLI,
+   config keys, URLs).
 3. **Data & privacy** — what is stored, where, and its sensitivity; the hard
    rule for what never leaves; what must never be committed (real data,
    personal config). This drives the `.gitignore`.
@@ -86,7 +92,14 @@ Before the first source file:
 - `.env.example` with placeholder values for any configuration.
 - `LICENSE` — MIT for a public repo unless the user says otherwise; none for a
   private one.
+- `SECURITY.md` for a public repo: report privately through GitHub's
+  "Report a vulnerability" button (the user enables private vulnerability
+  reporting in the repo's settings), never a public issue; what is in scope;
+  best-effort response, fixes in the latest version only.
 - A README stub: what it is, quickstart — filled in as the project grows.
+- Formatter and linter config committed. CI runs the local commands, fails
+  on lint warnings, sets top-level `permissions: contents: read`, and pins
+  third-party actions to a full commit SHA with the version in a comment.
 - Once a remote exists: `git remote set-head origin -a` (or
   `git remote set-head origin <default-branch>` offline). A clone sets
   `origin/HEAD` itself; a remote added to an existing repo does not, and

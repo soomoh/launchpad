@@ -10,19 +10,32 @@ set the bar for review.
 
 ## Process rules
 
-1. **No new dependency without justification** — what it does and why the
-   standard library can't. Every dependency is attack surface.
+1. **No new dependency, service, or build step without justification** — what
+   it does and why the standard library or what already exists can't. Every
+   dependency is attack surface; every service or build step is one more
+   thing to run, upgrade, and fix.
 2. **Tests ship with code.** Not strict TDD, but nothing lands untested. State
    what each test pins down. A bug fix includes the regression test that
-   would have caught it — and when you can't run tests (no shell, code shown
-   in a reply), still write them and show them with the fix.
-3. **Verify environment assumptions before using them.** Check the actual
+   would have caught it, seen failing before the fix and passing after when
+   you can run tests — and when you can't (no shell, code shown in a reply),
+   still write them and show them with the fix.
+3. **Subtract before adding.** Before adding a feature, option, or setting the
+   user didn't ask for, ask what breaks without it. When new code replaces
+   old, delete the old path in the same change. No commented-out code; a TODO
+   states the condition under which it gets done, or it is deleted.
+4. **Protect what others depend on.** Once anyone but the author may hold
+   data or habits built on it (a release, a shared tool, a deployed site),
+   the stable surface — saved data and file formats, schema, CLI flags,
+   config keys, URLs — changes only with a migration that is safe to run
+   twice, a backup step in the upgrade notes, and a test that loads
+   old-format data. Before that, say in the change summary what changed.
+5. **Verify environment assumptions before using them.** Check the actual
    interpreter or runtime version before using recent syntax. Code written for
    Python 3.12 crashes on a system `python3` that is 3.10. When environment and
    intent disagree, flag it — don't silently downgrade.
-4. **Run what you wrote.** Executing the real program on realistic input
+6. **Run what you wrote.** Executing the real program on realistic input
    catches what unit tests and type checkers miss.
-5. **Multi-line edits use the Edit tool.** A scripted edit asserts exactly
+7. **Multi-line edits use the Edit tool.** A scripted edit asserts exactly
    one match per replacement, and never slices between two index lookups
    without asserting their order.
 
@@ -83,12 +96,19 @@ Apply these, and name them in code and review when you do:
   CLIs, and route handlers stay thin.
 - Parametrize same-shape cases; built-in fixtures (`tmp_path`) over manual
   setup and teardown.
-- A regression test accompanies every bug fix.
+- **Code that reads user-supplied input gets a malformed-input table** —
+  empty, truncated, wrong encoding, oversized, boundary values. Each one
+  degrades with a message; none crashes.
 - **Real-browser checks use Playwright** — setup, sandbox-safe running, and
   CI per `${CLAUDE_PLUGIN_ROOT}/skills/engineering/references/browser-testing.md`.
 
 ## Style
 
+- **A rule a tool can check belongs to the tool.** When a review finding
+  recurs, add a lint rule or test rather than a note.
+- **Model instructions you write are code** (skills, agents, CLAUDE.md,
+  prompts). First they do the job reliably and repeatably; then every line
+  earns its context. One rule lives in one place.
 - Type hints on signatures; in Python, `X | None` over `Optional[X]`,
   `pathlib.Path` over `os.path`, f-strings, and a `NamedTuple` or `dataclass`
   once a record has 3+ fields or crosses a function boundary.

@@ -62,20 +62,26 @@ after another and say so in one line.
    synthetic fixtures belong; absolute personal paths.
 4. **Maintainability** — the design vocabulary in
    `${CLAUDE_PLUGIN_ROOT}/skills/engineering/SKILL.md`: hand-rolled solved
-   problems, if/elif chains that should be data, dead code, unclear names,
-   comments that say what instead of why, unjustified dependencies,
-   speculative abstraction.
+   problems, if/elif chains that should be data, unclear names, comments that
+   say what instead of why, speculative abstraction. Then ask what can be
+   deleted: dead code, commented-out code, unused options and config keys,
+   paths a replacement superseded, and dependencies, services, or build steps
+   without a stated reason.
 5. **Tests** — logic tested at the seam; the catastrophic failure mode pinned
    explicitly; risky paths with no test; mocks where fixture files belong;
    fixtures that look like real data.
 6. **Publish readiness**, judged against the intended audience (ask if it
    isn't clear; assume public when unsure) — README the intended reader can
-   follow (run the quickstart mentally against the repo), CI that mirrors
-   local commands, one authoritative lockfile, `.gitignore` in safety-device
-   shape, no TODO-shaped placeholders. **Public:** a LICENSE, and Claude's
-   notes not tracked unless a contributor needs them (`git ls-files .claude
-   CLAUDE.md AGENTS.md`). **Private:** no licence needed, and the hosted repo
-   actually private.
+   follow (run the quickstart mentally against the repo), one authoritative
+   lockfile, `.gitignore` in safety-device shape, no TODO-shaped
+   placeholders. CI, where it exists, runs the local commands, fails on lint
+   warnings, has read-only `permissions`, and SHA-pins third-party actions.
+   If a released version exists, changes since then to the plan's stable
+   surface come with upgrade notes. **Public:** a LICENSE; a `SECURITY.md`
+   giving a private way to report a vulnerability (GitHub private reporting
+   is enough); Claude's notes not tracked unless a contributor needs them
+   (`git ls-files .claude CLAUDE.md AGENTS.md`). **Private:** no licence
+   needed, and the hosted repo actually private.
 
 If the project has a UI, also run `launchpad:polish-pass` on its main surfaces.
 
