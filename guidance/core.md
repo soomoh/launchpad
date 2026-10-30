@@ -66,6 +66,8 @@ session, before the work it covers. A one-line fix needs only its tests.
    diff (one feature or fix); one per lens, in one message, only for a large
    or high-risk diff. Keep working (visual checks) while it runs.
 3. Verify each finding yourself, fix or report it, then stop for the commit.
+   A finding that shows the design is wrong (not a slip) goes back to the
+   user as a design question before more code.
 
 Skip step 2 only when the diff is docs, copy, or formatting alone; say so.
 

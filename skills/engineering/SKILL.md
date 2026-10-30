@@ -34,10 +34,23 @@ set the bar for review.
    Python 3.12 crashes on a system `python3` that is 3.10. When environment and
    intent disagree, flag it — don't silently downgrade.
 6. **Run what you wrote.** Executing the real program on realistic input
-   catches what unit tests and type checkers miss.
+   catches what unit tests and type checkers miss. A project that transforms
+   input keeps **one probe command** (e.g. `npm run probe -- <files>`): real
+   files through the real pipeline, one compact line per file (outcome,
+   period, row counts, totals). Answer behaviour questions with it, not
+   ad-hoc scripts. Make it a plain `node`/`tsx`/`python` script: Vitest
+   swallows console output, and test runners only pick up their configured
+   paths.
 7. **Multi-line edits use the Edit tool.** A scripted edit asserts exactly
    one match per replacement, and never slices between two index lookups
    without asserting their order.
+8. **Format once, before the checks.** When the edits are done, run the
+   formatter, then lint and tests — not after every write, or later
+   exact-match edits miss reformatted text. Re-run it only after editing
+   again.
+9. **Grep, then read the range.** When changing code, locate with search and
+   read only the lines you need; read a file over ~150 lines whole only when
+   editing most of it. Reviews and audits read what their scope says.
 
 ## Debugging: root cause, not symptoms
 

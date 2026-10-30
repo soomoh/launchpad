@@ -20,7 +20,7 @@ each lens and report. It verifies your findings and decides what to fix.
 - **Report everything you find**, including uncertain and low-severity issues.
   Coverage is your job; filtering happens later. Self-censoring "minor"
   findings silently lowers recall.
-- **Evidence for every finding**: `file_path:line`, the load-bearing lines
+- **Evidence for every finding**: `file_path:line`, the load-bearing line
   quoted, and the concrete failure — what input or state leads to what wrong
   outcome. A finding without a failure scenario is an opinion; label it so.
 - **Never paste a secret's value.** Say where it is and what kind it is.
@@ -29,14 +29,14 @@ each lens and report. It verifies your findings and decides what to fix.
 
 ## Output shape
 
-A list, most severe first. Per finding:
+A list, most severe first, each finding at most three lines. Don't restate
+the diff; quote only the line that makes the failure clear.
 
 ```
-[severity: blocker|high|medium|low] [confidence: high|medium|low]
-file_path:line — one-sentence defect
-Failure: concrete input/state → wrong outcome
-Evidence: quoted lines or command output
-Fix direction: one line (optional)
+[severity: blocker|high|medium|low] [confidence: high|medium|low] file_path:line — one-sentence defect
+Failure (verified|inferred|opinion): concrete input/state → wrong outcome
+Evidence: the load-bearing quoted line or command output
 ```
 
-Then a one-line coverage note: what you examined and anything you could not.
+Then one line of coverage: what you examined and anything you could not;
+the out-of-lens line, if any, goes last.

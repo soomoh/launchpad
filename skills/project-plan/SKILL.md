@@ -75,8 +75,14 @@ Keep it scannable — bullets over prose, a screen or two at most. Sections:
    licensing, platform limits, data loss on schema change). Ranked.
 7. **Decisions** — one line each: decision, alternatives, why. These stop
    future sessions re-litigating settled questions.
-8. **Open questions** — decisions that are the user's, with a recommendation.
-9. **Next steps** — phased, each phase a usable increment that ends green
+8. **Verified facts** — recurring questions about the code's behaviour,
+   answered in one line each, stamped with the commit checked and the files
+   the answer depends on, config and data included:
+   `answer — abc1234 — src/parse.ts, src/totals.ts`. Reuse a fact only while
+   `git diff <stamp> -- <files>` is empty; on any change or git error,
+   re-verify, then update the line and its stamp.
+9. **Open questions** — decisions that are the user's, with a recommendation.
+10. **Next steps** — phased, each phase a usable increment that ends green
    (tests + a real run). Tag tasks by tier where delegation pays:
    `[researcher]`, `[implementer]`, `[tester]`, or Tier 0 tooling; default is
    inline.
